@@ -3,7 +3,7 @@ import { z } from 'zod'
 const snowflake = z
   .string()
   .regex(/^\d{1,20}$/, 'must be a Discord Snowflake string')
-const snowflakeArray = z.array(snowflake)
+const snowflakeArray = z.array(snowflake).max(50)
 
 /** A data-driven definition of one MCP Tool mapping to a single Discord REST endpoint. */
 export interface ToolDef {
@@ -25,7 +25,7 @@ const qs = (
   return out
 }
 
-/** The 25 v1 Discord REST MCP tools, in the exact order specified by spec §17. */
+/** The v1 Discord REST MCP tools, in `tools/list` registration order. */
 export const toolCatalog: ToolDef[] = [
   {
     name: 'get_current_user',
@@ -124,7 +124,7 @@ export const toolCatalog: ToolDef[] = [
       after: snowflake.optional(),
       limit: z.number().int().min(1).max(100).optional(),
     },
-    // spec §9.4: around/before/after are mutually exclusive — enforced here since a
+    // Discord: around/before/after are mutually exclusive — enforced here since a
     // ZodRawShape has no top-level .refine() to express cross-field constraints.
     validate: (a) => {
       const set = ['around', 'before', 'after'].filter(
@@ -143,7 +143,7 @@ export const toolCatalog: ToolDef[] = [
     inputShape: {
       guild_id: snowflake,
       limit: z.number().int().min(1).max(25).optional(),
-      offset: z.number().int().min(0).optional(),
+      offset: z.number().int().min(0).max(9975).optional(),
       max_id: snowflake.optional(),
       min_id: snowflake.optional(),
       content: z.string().optional(),
@@ -161,6 +161,17 @@ export const toolCatalog: ToolDef[] = [
             'image',
             'sound',
             'sticker',
+            'poll',
+            'snapshot',
+            '-link',
+            '-embed',
+            '-file',
+            '-video',
+            '-image',
+            '-sound',
+            '-sticker',
+            '-poll',
+            '-snapshot',
           ])
         )
         .optional(),
@@ -259,7 +270,7 @@ export const toolCatalog: ToolDef[] = [
     inputShape: {
       channel_id: snowflake,
       before: z.iso.datetime().optional(),
-      limit: z.number().int().optional(),
+      limit: z.number().int().min(1).optional(),
     },
     path: (a) => `/channels/${String(a.channel_id)}/threads/archived/private`,
     query: (a) => qs(a, ['before', 'limit']),

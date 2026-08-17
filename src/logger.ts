@@ -1,5 +1,10 @@
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 } as const
-type Level = keyof typeof LEVELS
+
+/** The single source of truth for valid log level names, used across the logger and config validation. */
+export type Level = keyof typeof LEVELS
+
+/** `Level`'s member names as a tuple, for building a `zod` enum from it. */
+export const LEVEL_NAMES = Object.keys(LEVELS) as [Level, ...Level[]]
 
 /** Structured logger emitting one JSON line per call, filtered by level threshold. */
 export interface Logger {

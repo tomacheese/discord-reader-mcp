@@ -30,7 +30,7 @@ const EXPECTED_ORDER = [
 ]
 
 describe('toolCatalog', () => {
-  it('has exactly the 25 spec tools in spec §17 order', () => {
+  it('has exactly the expected tools in registration order', () => {
     expect(toolCatalog.map((t) => t.name)).toEqual(EXPECTED_ORDER)
   })
 

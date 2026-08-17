@@ -9,8 +9,6 @@ describe('loadConfig', () => {
     })
     expect(cfg.discordToken).toBe('tok')
     expect(cfg.mcpAuthToken).toBe('secret')
-    expect(cfg.host).toBe('0.0.0.0')
-    expect(cfg.port).toBe(8080)
     expect(cfg.discordRequestTimeoutMs).toBe(30_000)
     expect(cfg.logLevel).toBe('info')
     expect(cfg.allowedOrigins).toEqual([])
@@ -21,7 +19,6 @@ describe('loadConfig', () => {
       DISCORD_TOKEN: 'tok',
       MCP_AUTH_TOKEN: 'secret',
       MCP_ALLOWED_ORIGINS: 'https://a.example,https://b.example',
-      PORT: '9090',
       DISCORD_REQUEST_TIMEOUT_MS: '5000',
       LOG_LEVEL: 'debug',
     })
@@ -29,7 +26,6 @@ describe('loadConfig', () => {
       'https://a.example',
       'https://b.example',
     ])
-    expect(cfg.port).toBe(9090)
     expect(cfg.discordRequestTimeoutMs).toBe(5000)
     expect(cfg.logLevel).toBe('debug')
   })

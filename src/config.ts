@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LEVEL_NAMES, type Level } from './logger.js'
 
 /** Thrown when required environment variables are missing or invalid. */
 export class ConfigError extends Error {}
@@ -7,10 +8,8 @@ const schema = z.object({
   DISCORD_TOKEN: z.string().min(1, 'DISCORD_TOKEN is required'),
   MCP_AUTH_TOKEN: z.string().min(1, 'MCP_AUTH_TOKEN is required'),
   MCP_ALLOWED_ORIGINS: z.string().optional(),
-  HOST: z.string().optional(),
-  PORT: z.coerce.number().int().positive().optional(),
   DISCORD_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
+  LOG_LEVEL: z.enum(LEVEL_NAMES).optional(),
 })
 
 /** Normalized, validated application configuration. */
@@ -18,10 +17,8 @@ export interface Config {
   discordToken: string
   mcpAuthToken: string
   allowedOrigins: string[]
-  host: string
-  port: number
   discordRequestTimeoutMs: number
-  logLevel: 'debug' | 'info' | 'warn' | 'error'
+  logLevel: Level
 }
 
 /**
@@ -49,8 +46,6 @@ export function loadConfig(
           .map((s) => s.trim())
           .filter(Boolean)
       : [],
-    host: v.HOST ?? '0.0.0.0',
-    port: v.PORT ?? 8080,
     discordRequestTimeoutMs: v.DISCORD_REQUEST_TIMEOUT_MS ?? 30_000,
     logLevel: v.LOG_LEVEL ?? 'info',
   }

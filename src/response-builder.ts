@@ -13,7 +13,7 @@ const EXPOSED_HEADERS = [
   'retry-after',
 ] as const
 
-/** MCP `tools/call` result envelope: `{ data, meta }` under `structuredContent` (spec §10, §12.1). */
+/** MCP `tools/call` result envelope: `{ data, meta }` under `structuredContent`. */
 export interface ToolEnvelope {
   // Index signature required for structural assignability to McpServer's
   // CallToolResult-shaped return type (registerTool's callback contract).
@@ -27,7 +27,7 @@ export interface ToolEnvelope {
   isError?: boolean
 }
 
-/** Filters Discord response headers down to the allowlisted rate-limit/semantic headers (spec §10.4). */
+/** Filters Discord response headers down to the allowlisted rate-limit/semantic headers. */
 function filterHeaders(
   headers: Record<string, string>
 ): Record<string, string> {
@@ -81,7 +81,7 @@ export function buildResponse(
   return { structuredContent: { data, meta }, content: [] }
 }
 
-/** Builds a `data: null` error envelope for MCP-local failures (spec §13.3) — no Discord HTTP response exists. */
+/** Builds a `data: null` error envelope for MCP-local failures — no Discord HTTP response exists. */
 export function buildLocalError(type: string, message: string): ToolEnvelope {
   return {
     structuredContent: { data: null, meta: {}, error: { type, message } },

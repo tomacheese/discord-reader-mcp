@@ -27,7 +27,7 @@ Discord REST API の主要な読み取り機能を Model Context Protocol (MCP) 
 - Discord native pagination
 - JMESPath による response projection
 - Discord HTTP status / rate-limit headers の metadata 提供
-- Docker コンテナでのデプロイ
+- Azure Functions へのデプロイ
 
 ### 2.2 v1 対象外
 
@@ -50,20 +50,20 @@ Discord REST API の主要な読み取り機能を Model Context Protocol (MCP) 
 
 ## 3. 技術スタック
 
-| 区分 | 採用技術 | 方針 |
-|---|---|---|
-| Language | TypeScript | strict mode |
-| Runtime | Node.js 24 LTS | `@discordjs/rest` 要件に合わせ 24.17.0 以上 |
-| Package manager | pnpm | lockfile を commit |
-| MCP SDK | MCP TypeScript SDK v2 | `@modelcontextprotocol/server`, `@modelcontextprotocol/node` |
-| MCP protocol | 2026-07-28 primary | SDK v2 の stateless legacy compatibility も許容 |
-| Discord REST | `@discordjs/rest` | Gateway library は使用しない |
-| Discord types/routes | `discord-api-types/v10` | Discord API v10 |
-| Validation | Zod 4 | Tool input / environment validation |
-| Projection | JMESPath | 共通入力 `jmespath` |
-| JMESPath JS implementation | `jmespath` | version pin。仕様適合をテストで担保 |
-| Test | Vitest | unit / integration |
-| Deployment | Docker | non-root、multi-arch を想定 |
+| 区分                       | 採用技術                                       | 方針                                                         |
+| -------------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
+| Language                   | TypeScript                                     | strict mode                                                  |
+| Runtime                    | Node.js 24 LTS                                 | `@discordjs/rest` 要件に合わせ 24.17.0 以上                  |
+| Package manager            | pnpm                                           | lockfile を commit                                           |
+| MCP SDK                    | MCP TypeScript SDK v2                          | `@modelcontextprotocol/server`, `@modelcontextprotocol/node` |
+| MCP protocol               | 2026-07-28 primary                             | SDK v2 の stateless legacy compatibility も許容              |
+| Discord REST               | `@discordjs/rest`                              | Gateway library は使用しない                                 |
+| Discord types/routes       | `discord-api-types/v10`                        | Discord API v10                                              |
+| Validation                 | Zod 4                                          | Tool input / environment validation                          |
+| Projection                 | JMESPath                                       | 共通入力 `jmespath`                                          |
+| JMESPath JS implementation | `@jmespath-community/jmespath`                 | version pin。仕様適合をテストで担保                          |
+| Test                       | Vitest                                         | unit / integration                                           |
+| Deployment                 | Azure Functions (Node.js v4 programming model) | HTTP trigger、host が process lifecycle を管理               |
 
 依存 package の exact version は lockfile で固定する。基本設計では major/API line を規定し、patch version は実装開始時点の安定版を採用する。
 
@@ -207,21 +207,19 @@ MCP_ALLOWED_ORIGINS=https://example-client.invalid,...
 - startup config dump への secret 出力
 - Discord request Authorization header の log 出力
 
-Container は non-root user で実行する。
+Process 実行環境（ユーザー権限、隔離）は Azure Functions host が管理する。
 
 ## 7. Configuration
 
 ### 7.1 Environment variables
 
-| Name | Required | Default | Description |
-|---|---:|---|---|
-| `DISCORD_TOKEN` | Yes | - | Discord Bot token |
-| `MCP_AUTH_TOKEN` | Yes | - | MCP inbound Bearer token |
-| `MCP_ALLOWED_ORIGINS` | No | empty | comma-separated Origin allowlist |
-| `HOST` | No | `0.0.0.0` | listener address |
-| `PORT` | No | `8080` | listener port |
-| `DISCORD_REQUEST_TIMEOUT_MS` | No | `30000` | Discord REST request timeout |
-| `LOG_LEVEL` | No | `info` | application log level |
+| Name                         | Required | Default | Description                      |
+| ---------------------------- | -------: | ------- | -------------------------------- |
+| `DISCORD_TOKEN`              |      Yes | -       | Discord Bot token                |
+| `MCP_AUTH_TOKEN`             |      Yes | -       | MCP inbound Bearer token         |
+| `MCP_ALLOWED_ORIGINS`        |       No | empty   | comma-separated Origin allowlist |
+| `DISCORD_REQUEST_TIMEOUT_MS` |       No | `30000` | Discord REST request timeout     |
+| `LOG_LEVEL`                  |       No | `info`  | application log level            |
 
 全設定は startup 時に Zod で validation する。不正な必須設定がある場合は fail-fast で process を終了する。
 
@@ -274,9 +272,9 @@ MCP 層へ次の論理値を返す。
 
 ```ts
 interface DiscordHttpResult {
-  body: unknown;
-  status: number;
-  headers: Record<string, string>;
+  body: unknown
+  status: number
+  headers: Record<string, string>
 }
 ```
 
@@ -618,7 +616,7 @@ Error type は programmatic に安定した identifier とする。stack trace �
 
 ### 13.4 Protocol / input errors
 
-Tool input schema validation failureは MCP SDK の protocol-level invalid params handling に任せる。Discord API は呼び出さない。
+Tool input schema validation failure は MCP SDK の protocol-level invalid params handling に任せる。Discord API は呼び出さない。
 
 ## 14. Timeout / Retry / Rate Limit
 
@@ -954,7 +952,7 @@ Pagination: archive timestamp。
 - `after?`
 - `limit?`
 
-Pagination: API v10 では `with_member=true` のとき `after` / `limit` による paginated results を使用する。`with_member` 未指定/false では v10 の非pagination挙動をそのまま保持し、`meta.pagination` を捏造しない。`GUILD_MEMBERS` privileged intent の影響を受ける。
+Pagination: API v10 では `with_member=true` のとき `after` / `limit` による paginated results を使用する。`with_member` 未指定/false では v10 の非 pagination 挙動をそのまま保持し、`meta.pagination` を捏造しない。`GUILD_MEMBERS` privileged intent の影響を受ける。
 
 ### 17.9 Audit / Moderation
 
@@ -1134,7 +1132,7 @@ Release gate として、対象 MCP client から remote MCP として接続し�
 ### 20.2 Performance
 
 - server-side aggregation は行わない
-- JMESPath は response body に対し1回だけ評価する
+- JMESPath は response body に対し 1 回だけ評価する
 - log serialization で Discord payload 全体を複製しない
 
 ### 20.3 Availability
@@ -1154,25 +1152,13 @@ Release gate として、対象 MCP client から remote MCP として接続し�
 
 ## 21. Deployment Requirements
 
-Container image:
+Runtime: Azure Functions (Node.js, v4 programming model)。
 
-- Linux
-- Node.js 24 LTS
-- non-root execution
-- read-only application image
-- secrets は image に bake しない
-- amd64 / arm64 を想定
-- graceful shutdown を実装
-
-Reverse proxy / deployment platform 側に要求する事項:
-
-- public HTTPS
-- request body / response buffering が MCP transport と衝突しない設定
-- `/mcp` への POST forwarding
-- `/healthz` health check
-- sufficiently long upstream timeout (Discord request timeout 30 sec より大きいこと)
-
-Deployment platform の選定は本基本設計の範囲外とし、別途比較する。
+- Node.js 24 LTS (`.node-version` で pin)
+- HTTP trigger のみ (`/mcp`, `/healthz`)、`host.json` の `routePrefix` で既定の `/api` prefix を除去
+- secrets は `local.settings.json` / Azure Functions の application settings で管理し、image や repository に bake しない
+- process lifecycle（起動、シャットダウン、再起動）は Azure Functions host が管理するため application 側で個別に実装しない
+- sufficiently long function timeout (Discord request timeout 30 sec より大きいこと)
 
 ## 22. v1 Acceptance Criteria
 
@@ -1196,7 +1182,7 @@ Deployment platform の選定は本基本設計の範囲外とし、別途比較
 16. invalid Origin は拒否される。
 17. secret / message body / raw response body が application log に残らない。
 18. `/healthz` は Discord API を呼ばずに応答する。
-19. Docker container が non-root で起動する。
+19. Azure Functions app が `.node-version` で pin された Node.js 24 LTS 上で起動する。
 20. target MCP client で `structuredContent` only output を実利用できることが確認される。
 
 ## 23. Future Scope Candidates
@@ -1220,32 +1206,32 @@ Gateway が必要な Presence / realtime / voice state は REST MCP の単純拡
 
 ## 24. Explicit Design Decisions
 
-| Decision | v1 |
-|---|---|
-| Read / Write | Read-only |
-| Discord Gateway | No |
-| Guild scope | Multiple Guilds |
-| Tool granularity | High-level endpoint-specific Tools only |
-| Generic REST escape hatch | No |
-| Projection | JMESPath |
-| Common projection field | `jmespath` |
-| Response hard size limit | No |
-| Common item limit | No |
-| Automatic truncate | No |
-| Automatic pagination | No |
-| Pagination metadata | `meta.pagination.next` |
-| Response envelope | `{ data, meta }` |
-| HTTP metadata | status + allowlisted Discord semantic headers |
-| Error mapping | Discord errors preserved |
-| Retry | 5xx/network/timeout retryなし |
-| Rate limit | `@discordjs/rest` queue handling |
-| Discord timeout | 30 sec default, configurable |
-| MCP auth | Single Bearer token from env |
-| TLS | External termination |
-| Server state | Stateless |
-| Logging payload | Prohibited |
-| MCP canonical Tool result | `structuredContent` |
-| Duplicate JSON TextContent | No (`content: []`) |
+| Decision                   | v1                                            |
+| -------------------------- | --------------------------------------------- |
+| Read / Write               | Read-only                                     |
+| Discord Gateway            | No                                            |
+| Guild scope                | Multiple Guilds                               |
+| Tool granularity           | High-level endpoint-specific Tools only       |
+| Generic REST escape hatch  | No                                            |
+| Projection                 | JMESPath                                      |
+| Common projection field    | `jmespath`                                    |
+| Response hard size limit   | No                                            |
+| Common item limit          | No                                            |
+| Automatic truncate         | No                                            |
+| Automatic pagination       | No                                            |
+| Pagination metadata        | `meta.pagination.next`                        |
+| Response envelope          | `{ data, meta }`                              |
+| HTTP metadata              | status + allowlisted Discord semantic headers |
+| Error mapping              | Discord errors preserved                      |
+| Retry                      | 5xx/network/timeout retry なし                |
+| Rate limit                 | `@discordjs/rest` queue handling              |
+| Discord timeout            | 30 sec default, configurable                  |
+| MCP auth                   | Single Bearer token from env                  |
+| TLS                        | External termination                          |
+| Server state               | Stateless                                     |
+| Logging payload            | Prohibited                                    |
+| MCP canonical Tool result  | `structuredContent`                           |
+| Duplicate JSON TextContent | No (`content: []`)                            |
 
 ## 25. References
 
@@ -1275,4 +1261,3 @@ Gateway が必要な Presence / realtime / voice state は REST MCP の単純拡
   https://discord.js.org/docs/packages/rest/main
 - JMESPath JavaScript implementation  
   https://github.com/jmespath/jmespath.js
-

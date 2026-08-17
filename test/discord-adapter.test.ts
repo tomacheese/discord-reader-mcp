@@ -6,7 +6,12 @@ import {
 
 type ResponseListener = (
   request: { data: { signal?: AbortSignal } },
-  response: { status: number; headers: Headers; json(): Promise<unknown> }
+  response: {
+    status: number
+    headers: Headers
+    body: ReadableStream | null
+    json(): Promise<unknown>
+  }
 ) => void
 
 /**
@@ -40,6 +45,7 @@ function fakeRest(
         const response = {
           status: r.status,
           headers: new Headers(r.headers ?? {}),
+          body: null,
           json: () => Promise.resolve(r.body),
         }
         for (const listener of listeners) listener({ data: request }, response)
@@ -98,6 +104,45 @@ describe('createDiscordAdapter', () => {
     )
     await expect(adapter.request('GET', '/users/@me')).rejects.toBeInstanceOf(
       DiscordRequestError
+    )
+  })
+
+  it('returns body: null for a 204 response without reading json()', async () => {
+    const rest = fakeRest([{ status: 204, body: undefined, headers: {} }])
+    const adapter = createDiscordAdapter(
+      { discordToken: 't', discordRequestTimeoutMs: 30_000 },
+      rest
+    )
+    const result = await adapter.request('GET', '/users/@me')
+    expect(result.body).toBeNull()
+  })
+
+  it('propagates a json() parse failure on a non-204 response instead of masking it as null', async () => {
+    let listener: ResponseListener | undefined
+    const rest = {
+      on: vi.fn((_event: 'response', l: ResponseListener) => {
+        listener = l
+      }),
+      off: vi.fn(),
+      queueRequest: vi.fn((request: { signal?: AbortSignal }) => {
+        listener?.(
+          { data: { signal: request.signal } },
+          {
+            status: 200,
+            headers: new Headers(),
+            body: null,
+            json: () => Promise.reject(new Error('invalid json')),
+          }
+        )
+        return Promise.resolve()
+      }),
+    }
+    const adapter = createDiscordAdapter(
+      { discordToken: 't', discordRequestTimeoutMs: 30_000 },
+      rest
+    )
+    await expect(adapter.request('GET', '/users/@me')).rejects.toThrow(
+      'invalid json'
     )
   })
 

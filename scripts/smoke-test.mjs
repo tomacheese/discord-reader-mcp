@@ -5,7 +5,7 @@ const token = process.env.MCP_AUTH_TOKEN
 if (!token) throw new Error('MCP_AUTH_TOKEN env var required')
 
 const transport = new StreamableHTTPClientTransport(
-  new URL('http://127.0.0.1:8080/mcp'),
+  new URL('http://127.0.0.1:7071/mcp'),
   { requestInit: { headers: { authorization: `Bearer ${token}` } } }
 )
 const client = new Client({ name: 'smoke-test', version: '1.0.0' })

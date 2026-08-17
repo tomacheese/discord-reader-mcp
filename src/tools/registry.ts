@@ -41,10 +41,17 @@ export function buildToolHandler(
         args,
         jmespathExpr as string | undefined
       )
-      logger.info('tool call completed', {
-        tool: def.name,
-        status: result.status,
-      })
+      if (result.status >= 400) {
+        logger.warn('tool call completed', {
+          tool: def.name,
+          status: result.status,
+        })
+      } else {
+        logger.info('tool call completed', {
+          tool: def.name,
+          status: result.status,
+        })
+      }
       return envelope
     } catch (err) {
       if (err instanceof JmespathError) {
@@ -66,17 +73,18 @@ export function buildToolHandler(
         })
         return buildLocalError(type, message)
       }
-      logger.error('tool call failed: unexpected error', { tool: def.name })
+      logger.error('tool call failed: unexpected error', {
+        tool: def.name,
+        message: err instanceof Error ? err.message : String(err),
+      })
       return buildLocalError('INTERNAL_ERROR', 'Internal processing failure')
     }
   }
 }
 
-// Minimal structural type for the MCP SDK server surface this registry needs —
-// avoids importing SDK-internal types here; src/server.ts uses the real SDK type.
 /**
  * Minimal structural type for the MCP SDK server surface this registry needs —
- * avoids importing SDK-internal types here; {@link ../server.ts} passes the real SDK type.
+ * avoids importing SDK-internal types here; {@link ../functions/mcp.ts} passes the real SDK type.
  */
 export interface McpServerLike {
   registerTool(
@@ -90,9 +98,11 @@ export interface McpServerLike {
   ): void
 }
 
+const jmespathField = { jmespath: z.string().optional() }
+
 /**
  * Registers every entry of {@link toolCatalog} on `server`, in catalog order
- * (spec §8.3 — deterministic `tools/list` ordering), adding the common `jmespath` field.
+ * (deterministic `tools/list` ordering), adding the common `jmespath` field.
  */
 export function registerAllTools(
   server: McpServerLike,
@@ -104,7 +114,7 @@ export function registerAllTools(
       def.name,
       {
         description: def.description,
-        inputSchema: { ...def.inputShape, jmespath: z.string().optional() },
+        inputSchema: { ...def.inputShape, ...jmespathField },
         annotations: { readOnlyHint: true },
       },
       buildToolHandler(adapter, def, logger)

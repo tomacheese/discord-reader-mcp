@@ -1,4 +1,7 @@
-import jmespath from 'jmespath'
+import {
+  search as jmespathSearch,
+  type JSONValue,
+} from '@jmespath-community/jmespath'
 
 /** Thrown when a `jmespath` expression is invalid or fails to evaluate. */
 export class JmespathError extends Error {}
@@ -16,7 +19,7 @@ export function project(
 ): unknown {
   if (expression === undefined) return body
   try {
-    return jmespath.search(body, expression)
+    return jmespathSearch(body as JSONValue, expression)
   } catch (err) {
     throw new JmespathError(
       `Invalid jmespath expression: ${(err as Error).message}`

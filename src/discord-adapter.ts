@@ -12,7 +12,7 @@ export interface DiscordHttpResult {
 export class DiscordRequestError extends Error {
   constructor(
     message: string,
-    public readonly cause: 'timeout' | 'network' | 'other'
+    public readonly cause: 'timeout' | 'network'
   ) {
     super(message)
   }
@@ -50,6 +50,7 @@ function toSearchParams(
 interface RawResponseLike {
   status: number
   headers: Headers
+  body: ReadableStream | null
   json(): Promise<unknown>
 }
 
@@ -58,13 +59,16 @@ interface EmittedRequestInfo {
   data: { signal?: AbortSignal }
 }
 
-// Minimal structural type for the subset of REST we call. `queueRequest()` throws
-// on Discord 4xx/5xx (it is not a raw, non-throwing fetch despite its declared
-// return type), so status/headers for error responses are instead captured from
-// the `response` event, which `@discordjs/rest` emits for every request — success
-// or error — with a cloned, independently-readable ResponseLike. Correlating the
-// event to a specific call (required for concurrency safety — see spec §8.4) uses
-// each call's own `AbortSignal` as an identity token, never triggered to abort.
+/**
+ * Minimal structural type for the subset of REST we call.
+ * `queueRequest()` throws on Discord 4xx/5xx — it is not a raw, non-throwing
+ * fetch despite its declared return type. Status/headers for error responses
+ * are instead captured from the `response` event, which `@discordjs/rest`
+ * emits for every request, success or error, with a cloned,
+ * independently-readable ResponseLike. Correlating the event to a specific
+ * call (required for concurrency safety) uses each call's own `AbortSignal`
+ * as an identity token, never triggered to abort.
+ */
 interface RestLike {
   queueRequest(request: {
     method: RequestMethod
@@ -80,26 +84,30 @@ interface RestLike {
     event: 'response',
     listener: (request: EmittedRequestInfo, response: RawResponseLike) => void
   ): unknown
+  setMaxListeners?(n: number): unknown
 }
 
+/** Lowercases every header name into a plain record. */
 function toHeaderRecord(headers: Headers): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, value] of headers.entries()) out[key.toLowerCase()] = value
   return out
 }
 
-/** Reads a captured response's JSON body, tolerating a non-JSON body (e.g. an upstream error page). */
+/**
+ * Reads a captured response's JSON body. Returns `null` only for a genuinely
+ * empty body (204 No Content); a malformed body on a non-empty response is
+ * a real failure and is left to throw, rather than being silently
+ * indistinguishable from a legitimate `null` result.
+ */
 async function readJsonBody(response: RawResponseLike): Promise<unknown> {
-  try {
-    return await response.json()
-  } catch {
-    return null
-  }
+  if (response.status === 204) return null
+  return response.json()
 }
 
 /**
- * Creates a {@link DiscordAdapter} backed by `@discordjs/rest`, configured with
- * `retries: 0` (spec §14.2) so 5xx/timeout/network failures are never retried locally.
+ * Creates a {@link DiscordAdapter} backed by `@discordjs/rest`, configured
+ * with `retries: 0` so 5xx/timeout/network failures are never retried locally.
  * @param config - `discordToken` and `discordRequestTimeoutMs` from {@link Config}.
  * @param restOverride - Test-only seam accepting a fake REST implementation.
  */
@@ -112,6 +120,10 @@ export function createDiscordAdapter(
     new REST({ timeout: config.discordRequestTimeoutMs, retries: 0 }).setToken(
       config.discordToken
     )
+  // A `response` listener is added/removed per request below, so concurrent
+  // in-flight requests each hold their own listener at once — raise the cap
+  // to avoid Node's default MaxListenersExceededWarning under load.
+  rest.setMaxListeners?.(0)
 
   return {
     async request(_method, path, query) {
@@ -122,7 +134,12 @@ export function createDiscordAdapter(
         request: EmittedRequestInfo,
         response: RawResponseLike
       ) => {
-        if (request.data.signal === signal) captured = response
+        if (request.data.signal === signal) {
+          captured = response
+        } else {
+          // Not our request — release the clone instead of leaving it buffered.
+          response.body?.cancel().catch(() => undefined)
+        }
       }
       rest.on('response', onResponse)
 
@@ -151,7 +168,10 @@ export function createDiscordAdapter(
       const message =
         thrown instanceof Error ? thrown.message : 'unknown transport error'
       const cause = /timeout|abort/i.test(message) ? 'timeout' : 'network'
-      throw new DiscordRequestError(`Discord request failed: ${cause}`, cause)
+      throw new DiscordRequestError(
+        `Discord request failed (${cause}): ${message}`,
+        cause
+      )
     },
   }
 }

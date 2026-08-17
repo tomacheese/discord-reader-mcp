@@ -1,9 +1,0 @@
-node_modules
-dist
-.env
-.env.*
-.mcp-auth-token
-.server.pid
-*.log
-docs
-.git
