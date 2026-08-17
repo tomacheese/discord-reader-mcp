@@ -1,4 +1,9 @@
-import { REST, RequestMethod } from '@discordjs/rest'
+import {
+  REST,
+  RequestMethod,
+  DiscordAPIError,
+  HTTPError,
+} from '@discordjs/rest'
 import type { Config } from './config.js'
 
 /** Raw Discord HTTP response: status, lowercased headers, and parsed JSON body. */
@@ -137,8 +142,16 @@ export function createDiscordAdapter(
         if (request.data.signal === signal) {
           captured = response
         } else {
-          // Not our request — release the clone instead of leaving it buffered.
-          response.body?.cancel().catch(() => undefined)
+          // Not our request — best-effort release of the clone instead of
+          // leaving it buffered. This runs synchronously inside REST's
+          // `emit()`, so any throw here (e.g. a `.body` shape without
+          // `.cancel`) would corrupt an unrelated concurrent request's
+          // `queueRequest()` result — never let it escape.
+          try {
+            response.body?.cancel().catch(() => undefined)
+          } catch {
+            // ignored — see comment above
+          }
         }
       }
       rest.on('response', onResponse)
@@ -155,6 +168,26 @@ export function createDiscordAdapter(
         thrown = err
       } finally {
         rest.off('response', onResponse)
+      }
+
+      // On a Discord 4xx/5xx, `@discordjs/rest` already read and parsed the
+      // original response's body internally to build this error — re-reading
+      // the cloned `captured` response's body at this point races with that
+      // internal read and can throw (`assert(!stream[kConsume])`), so the
+      // status/body come from the error itself, never from `captured.json()`.
+      if (thrown instanceof DiscordAPIError) {
+        return {
+          body: thrown.rawError,
+          status: thrown.status,
+          headers: captured ? toHeaderRecord(captured.headers) : {},
+        }
+      }
+      if (thrown instanceof HTTPError) {
+        return {
+          body: null,
+          status: thrown.status,
+          headers: captured ? toHeaderRecord(captured.headers) : {},
+        }
       }
 
       if (captured) {

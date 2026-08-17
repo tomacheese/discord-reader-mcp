@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { DiscordAPIError, HTTPError } from '@discordjs/rest'
 import {
   createDiscordAdapter,
   DiscordRequestError,
@@ -46,11 +47,37 @@ function fakeRest(
           status: r.status,
           headers: new Headers(r.headers ?? {}),
           body: null,
-          json: () => Promise.resolve(r.body),
+          // A real `@discordjs/rest` internally reads the body while
+          // building its thrown error; re-reading `json()` here on a 4xx/5xx
+          // response would race with that (see the "does not call json()"
+          // test below), so the fake fails loudly if the adapter ever does.
+          json: () =>
+            r.status >= 400
+              ? Promise.reject(
+                  new Error(
+                    'adapter must not read the body on an error response'
+                  )
+                )
+              : Promise.resolve(r.body),
         }
         for (const listener of listeners) listener({ data: request }, response)
-        if (r.status >= 400)
-          return Promise.reject(new Error('Discord API error'))
+        if (r.status >= 500) {
+          return Promise.reject(
+            new HTTPError(r.status, 'Error', 'GET', 'https://discord.com', {})
+          )
+        }
+        if (r.status >= 400) {
+          return Promise.reject(
+            new DiscordAPIError(
+              r.body as never,
+              (r.body as { code?: number }).code ?? 0,
+              r.status,
+              'GET',
+              'https://discord.com',
+              {}
+            )
+          )
+        }
         return Promise.resolve(r.body)
       }
     ),
@@ -76,7 +103,7 @@ describe('createDiscordAdapter', () => {
     expect(result.headers['x-ratelimit-remaining']).toBe('4')
   })
 
-  it('returns (not throws) on a 403 Discord error body', async () => {
+  it('returns (not throws) on a 403 Discord error body, read from the thrown DiscordAPIError rather than re-reading the response', async () => {
     const rest = fakeRest([
       { status: 403, body: { message: 'Missing Permissions', code: 50_013 } },
     ])
@@ -90,6 +117,17 @@ describe('createDiscordAdapter', () => {
       message: 'Missing Permissions',
       code: 50_013,
     })
+  })
+
+  it('returns (not throws) on a 500 response, with a null body', async () => {
+    const rest = fakeRest([{ status: 500, body: null }])
+    const adapter = createDiscordAdapter(
+      { discordToken: 't', discordRequestTimeoutMs: 30_000 },
+      rest
+    )
+    const result = await adapter.request('GET', '/guilds/1/bans')
+    expect(result.status).toBe(500)
+    expect(result.body).toBeNull()
   })
 
   it('throws DiscordRequestError on transport failure', async () => {
@@ -144,6 +182,46 @@ describe('createDiscordAdapter', () => {
     await expect(adapter.request('GET', '/users/@me')).rejects.toThrow(
       'invalid json'
     )
+  })
+
+  it('ignores a foreign response event whose body lacks .cancel(), without corrupting the in-flight request', async () => {
+    let listener: ResponseListener | undefined
+    const rest = {
+      on: vi.fn((_event: 'response', l: ResponseListener) => {
+        listener = l
+      }),
+      off: vi.fn(),
+      queueRequest: vi.fn((request: { signal?: AbortSignal }) => {
+        // A response for a different, unrelated in-flight call arrives first —
+        // its `body` is a plain object without `.cancel`, unlike a real
+        // ReadableStream, exercising the defensive guard.
+        listener?.(
+          { data: { signal: new AbortController().signal } },
+          {
+            status: 200,
+            headers: new Headers(),
+            body: {} as ReadableStream,
+            json: () => Promise.resolve({ foreign: true }),
+          }
+        )
+        listener?.(
+          { data: { signal: request.signal } },
+          {
+            status: 200,
+            headers: new Headers(),
+            body: null,
+            json: () => Promise.resolve({ mine: true }),
+          }
+        )
+        return Promise.resolve()
+      }),
+    }
+    const adapter = createDiscordAdapter(
+      { discordToken: 't', discordRequestTimeoutMs: 30_000 },
+      rest
+    )
+    const result = await adapter.request('GET', '/users/@me')
+    expect(result.body).toEqual({ mine: true })
   })
 
   it('passes query params through as a URLSearchParams', async () => {
