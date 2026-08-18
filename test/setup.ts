@@ -3,4 +3,3 @@
 // side effect. Placeholder values here let that import succeed under vitest;
 // tests exercising real behavior use `createMcpFunction` with explicit config.
 process.env.DISCORD_TOKEN ??= 'test-placeholder-token'
-process.env.MCP_AUTH_TOKEN ??= 'test-placeholder-token'

@@ -6,7 +6,12 @@ import type { Logger } from '../logger.js'
 import { createLogger } from '../logger.js'
 import { createDiscordAdapter } from '../discord-adapter.js'
 import { registerAllTools } from '../tools/registry.js'
-import { isAuthorized, isOriginAllowed } from '../http-guards.js'
+import {
+  isOriginAllowed,
+  corsHeaders,
+  CORS_ALLOWED_METHODS,
+  CORS_ALLOWED_HEADERS,
+} from '../http-guards.js'
 
 /** Converts an Azure Functions request into a Web-standard `Request` for the MCP handler. */
 function toWebRequest(request: HttpRequest): Request {
@@ -19,30 +24,41 @@ function toWebRequest(request: HttpRequest): Request {
   } as RequestInit)
 }
 
-/** Converts the MCP handler's Web-standard `Response` into an Azure `HttpResponseInit`. */
+/**
+ * Converts the MCP handler's Web-standard `Response` into an Azure
+ * `HttpResponseInit`, merging in the CORS headers computed for this request.
+ */
 async function toFunctionResponse(
-  response: Response
+  response: Response,
+  extraHeaders: Record<string, string>
 ): Promise<HttpResponseInit> {
+  const headers = new Headers(response.headers)
+  for (const [key, value] of Object.entries(extraHeaders)) {
+    headers.set(key, value)
+  }
   return {
     status: response.status,
-    headers: response.headers,
+    headers,
     body: Buffer.from(await response.arrayBuffer()),
   }
 }
 
 /**
- * Builds the `/mcp` handler (`GET`/`POST`/`DELETE`), Bearer + Origin guarded,
- * delegating to the MCP SDK's stateless Streamable HTTP handler.
- * @param config - `mcpAuthToken`/`allowedOrigins` plus the fields {@link createDiscordAdapter} needs.
+ * Builds the `/mcp` handler (`GET`/`POST`/`DELETE`), app-key (via
+ * `authLevel: 'function'` on registration) + Origin guarded, delegating to
+ * the MCP SDK's stateless Streamable HTTP handler.
+ *
+ * ponytail: the app key is the only auth layer — ChatGPT's custom connector
+ * only offers OAuth or no-auth, never a Bearer token, so a second app-level
+ * check would just lock ChatGPT out. Add one back if a client that can send
+ * an Authorization header needs finer-grained access than the app key gives.
+ * @param config - `allowedOrigins` plus the fields {@link createDiscordAdapter} needs.
  * @param logger - Logger for request-scoped, secret-free log lines.
  */
 export function createMcpFunction(
   config: Pick<
     Config,
-    | 'mcpAuthToken'
-    | 'allowedOrigins'
-    | 'discordToken'
-    | 'discordRequestTimeoutMs'
+    'allowedOrigins' | 'discordToken' | 'discordRequestTimeoutMs'
   >,
   logger: Logger
 ) {
@@ -75,20 +91,26 @@ export function createMcpFunction(
   )
 
   return async function mcp(request: HttpRequest): Promise<HttpResponseInit> {
-    if (!isAuthorized(request.headers, config.mcpAuthToken)) {
-      return { status: 401, jsonBody: { error: 'unauthorized' } }
-    }
+    const cors = corsHeaders(request.headers, config.allowedOrigins)
     if (!isOriginAllowed(request.headers, config.allowedOrigins)) {
-      return { status: 403, jsonBody: { error: 'origin not allowed' } }
+      return {
+        status: 403,
+        headers: cors,
+        jsonBody: { error: 'origin not allowed' },
+      }
     }
     try {
       const response = await mcpHandler.fetch(toWebRequest(request))
-      return await toFunctionResponse(response)
+      return await toFunctionResponse(response, cors)
     } catch (err) {
       logger.error('unhandled MCP request error', {
         message: err instanceof Error ? err.message : String(err),
       })
-      return { status: 500, jsonBody: { error: 'internal error' } }
+      return {
+        status: 500,
+        headers: cors,
+        jsonBody: { error: 'internal error' },
+      }
     }
   }
 }
@@ -99,7 +121,29 @@ const logger = createLogger(config.logLevel)
 // eslint-disable-next-line unicorn/no-top-level-side-effects -- Azure Functions v4 discovers functions by importing this file and running app.http() as a side effect
 app.http('mcp', {
   methods: ['GET', 'POST', 'DELETE'],
-  authLevel: 'anonymous',
+  // App-key gated: callers must supply the Function App's host key (?code=
+  // or x-functions-key) — the only auth layer, see createMcpFunction's doc.
+  authLevel: 'function',
   route: 'mcp',
   handler: createMcpFunction(config, logger),
+})
+
+// eslint-disable-next-line unicorn/no-top-level-side-effects -- see above
+app.http('mcpPreflight', {
+  methods: ['OPTIONS'],
+  // CORS preflight never carries the app key, so this route stays
+  // anonymous — it only ever returns the CORS headers below.
+  authLevel: 'anonymous',
+  route: 'mcp',
+  handler: (request) => {
+    const cors = corsHeaders(request.headers, config.allowedOrigins)
+    return {
+      status: 204,
+      headers: {
+        ...cors,
+        'Access-Control-Allow-Methods': CORS_ALLOWED_METHODS,
+        'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
+      },
+    }
+  },
 })

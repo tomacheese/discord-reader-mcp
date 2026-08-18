@@ -6,7 +6,6 @@ export class ConfigError extends Error {}
 
 const schema = z.object({
   DISCORD_TOKEN: z.string().min(1, 'DISCORD_TOKEN is required'),
-  MCP_AUTH_TOKEN: z.string().min(1, 'MCP_AUTH_TOKEN is required'),
   MCP_ALLOWED_ORIGINS: z.string().optional(),
   DISCORD_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
   LOG_LEVEL: z.enum(LEVEL_NAMES).optional(),
@@ -15,7 +14,6 @@ const schema = z.object({
 /** Normalized, validated application configuration. */
 export interface Config {
   discordToken: string
-  mcpAuthToken: string
   allowedOrigins: string[]
   discordRequestTimeoutMs: number
   logLevel: Level
@@ -40,7 +38,6 @@ export function loadConfig(
   const v = parsed.data
   return {
     discordToken: v.DISCORD_TOKEN,
-    mcpAuthToken: v.MCP_AUTH_TOKEN,
     allowedOrigins: v.MCP_ALLOWED_ORIGINS
       ? v.MCP_ALLOWED_ORIGINS.split(',')
           .map((s) => s.trim())

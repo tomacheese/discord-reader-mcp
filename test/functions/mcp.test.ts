@@ -5,7 +5,6 @@ import { createLogger } from '../../src/logger.js'
 
 const config = {
   discordToken: 'fake',
-  mcpAuthToken: 'secret-token',
   allowedOrigins: ['https://allowed.example'],
   discordRequestTimeoutMs: 30_000,
 }
@@ -28,27 +27,24 @@ function fakeRequest(init: {
 describe('createMcpFunction', () => {
   const mcp = createMcpFunction(config, createLogger('error'))
 
-  it('rejects a request with no Authorization header', async () => {
-    const result = await mcp(fakeRequest({}))
-    expect(result.status).toBe(401)
-  })
-
-  it('rejects a request with the wrong Bearer token', async () => {
+  it('rejects a disallowed Origin, with no CORS headers echoed back', async () => {
     const result = await mcp(
-      fakeRequest({ headers: { authorization: 'Bearer wrong' } })
-    )
-    expect(result.status).toBe(401)
-  })
-
-  it('rejects a disallowed Origin even with a valid Bearer token', async () => {
-    const result = await mcp(
-      fakeRequest({
-        headers: {
-          authorization: 'Bearer secret-token',
-          origin: 'https://evil.example',
-        },
-      })
+      fakeRequest({ headers: { origin: 'https://evil.example' } })
     )
     expect(result.status).toBe(403)
+    expect(
+      (result.headers as Record<string, string> | undefined)?.[
+        'Access-Control-Allow-Origin'
+      ]
+    ).toBeUndefined()
+  })
+
+  it('echoes an allowed Origin as Access-Control-Allow-Origin', async () => {
+    const result = await mcp(
+      fakeRequest({ headers: { origin: 'https://allowed.example' } })
+    )
+    expect((result.headers as Headers).get('Access-Control-Allow-Origin')).toBe(
+      'https://allowed.example'
+    )
   })
 })

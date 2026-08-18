@@ -1,20 +1,6 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
-
 /** The subset of the Fetch `Headers` interface these guards need — satisfied by both a real `Headers` and Azure Functions' `HttpRequest.headers`. */
 export interface HeadersLike {
   get(name: string): string | null
-}
-
-/** Hashes a string so two values of differing length can still be compared in constant time. */
-function digest(value: string): Buffer {
-  return createHash('sha256').update(value).digest()
-}
-
-/** Checks the `Authorization: Bearer <token>` header against the configured MCP auth token, in constant time. */
-export function isAuthorized(headers: HeadersLike, token: string): boolean {
-  const header = headers.get('authorization')
-  if (header === null) return false
-  return timingSafeEqual(digest(header), digest(`Bearer ${token}`))
 }
 
 /**
@@ -28,4 +14,25 @@ export function isOriginAllowed(
   const origin = headers.get('origin')
   if (origin === null) return true
   return allowedOrigins.includes(origin)
+}
+
+/** Methods the `/mcp` route accepts, echoed on CORS preflight. */
+export const CORS_ALLOWED_METHODS = 'GET, POST, DELETE, OPTIONS'
+
+/** Request headers MCP clients send, echoed on CORS preflight. */
+export const CORS_ALLOWED_HEADERS =
+  'authorization, content-type, mcp-session-id, mcp-protocol-version'
+
+/**
+ * Builds CORS response headers for a request whose `Origin` is present and
+ * allowed — empty otherwise, which leaves the response with no CORS headers
+ * at all (same-origin/non-browser callers, who never check for them).
+ */
+export function corsHeaders(
+  headers: HeadersLike,
+  allowedOrigins: string[]
+): Record<string, string> {
+  const origin = headers.get('origin')
+  if (origin === null || !allowedOrigins.includes(origin)) return {}
+  return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
 }

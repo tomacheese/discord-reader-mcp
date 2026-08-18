@@ -5,10 +5,8 @@ describe('loadConfig', () => {
   it('loads required vars and applies defaults', () => {
     const cfg = loadConfig({
       DISCORD_TOKEN: 'tok',
-      MCP_AUTH_TOKEN: 'secret',
     })
     expect(cfg.discordToken).toBe('tok')
-    expect(cfg.mcpAuthToken).toBe('secret')
     expect(cfg.discordRequestTimeoutMs).toBe(30_000)
     expect(cfg.logLevel).toBe('info')
     expect(cfg.allowedOrigins).toEqual([])
@@ -17,7 +15,6 @@ describe('loadConfig', () => {
   it('parses comma-separated origins and numeric overrides', () => {
     const cfg = loadConfig({
       DISCORD_TOKEN: 'tok',
-      MCP_AUTH_TOKEN: 'secret',
       MCP_ALLOWED_ORIGINS: 'https://a.example,https://b.example',
       DISCORD_REQUEST_TIMEOUT_MS: '5000',
       LOG_LEVEL: 'debug',
@@ -32,11 +29,11 @@ describe('loadConfig', () => {
 
   it('throws ConfigError without leaking secret value when DISCORD_TOKEN missing', () => {
     try {
-      loadConfig({ MCP_AUTH_TOKEN: 'secret' })
+      loadConfig({ DISCORD_TOKEN: '', LOG_LEVEL: 'debug' })
       expect.unreachable()
     } catch (error) {
       expect(error).toBeInstanceOf(ConfigError)
-      expect((error as Error).message).not.toContain('secret')
+      expect((error as Error).message).not.toContain('debug')
     }
   })
 })

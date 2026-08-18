@@ -1,21 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isAuthorized, isOriginAllowed } from '../src/http-guards.js'
-
-describe('isAuthorized', () => {
-  it('accepts the exact configured Bearer token', () => {
-    const headers = new Headers({ authorization: 'Bearer secret' })
-    expect(isAuthorized(headers, 'secret')).toBe(true)
-  })
-
-  it('rejects a missing Authorization header', () => {
-    expect(isAuthorized(new Headers(), 'secret')).toBe(false)
-  })
-
-  it('rejects a wrong token', () => {
-    const headers = new Headers({ authorization: 'Bearer wrong' })
-    expect(isAuthorized(headers, 'secret')).toBe(false)
-  })
-})
+import { isOriginAllowed, corsHeaders } from '../src/http-guards.js'
 
 describe('isOriginAllowed', () => {
   it('allows a request with no Origin header', () => {
@@ -35,5 +19,24 @@ describe('isOriginAllowed', () => {
   it('rejects any Origin when the allowlist is empty', () => {
     const headers = new Headers({ origin: 'https://allowed.example' })
     expect(isOriginAllowed(headers, [])).toBe(false)
+  })
+})
+
+describe('corsHeaders', () => {
+  it('returns no headers when Origin is absent', () => {
+    expect(corsHeaders(new Headers(), ['https://allowed.example'])).toEqual({})
+  })
+
+  it('returns no headers when Origin is absent from the allowlist', () => {
+    const headers = new Headers({ origin: 'https://evil.example' })
+    expect(corsHeaders(headers, ['https://allowed.example'])).toEqual({})
+  })
+
+  it('echoes an allowed Origin back with Access-Control-Allow-Origin', () => {
+    const headers = new Headers({ origin: 'https://allowed.example' })
+    expect(corsHeaders(headers, ['https://allowed.example'])).toEqual({
+      'Access-Control-Allow-Origin': 'https://allowed.example',
+      Vary: 'Origin',
+    })
   })
 })
