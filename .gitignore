@@ -4,3 +4,4 @@ dist/
 .mcp-auth-token
 *.log
 local.settings.json
+infra/main.json
