@@ -23,8 +23,15 @@ export interface ToolEnvelope {
     meta: Record<string, unknown>
     error?: { type: string; message: string }
   }
-  content: []
+  // Text-serialized mirror of structuredContent.data, for MCP clients that
+  // read only `content` and ignore the additive `structuredContent` field.
+  content: { type: 'text'; text: string }[]
   isError?: boolean
+}
+
+/** Wraps a JSON-serializable value as a single MCP text content block. */
+function textContent(value: unknown): { type: 'text'; text: string }[] {
+  return [{ type: 'text', text: JSON.stringify(value) }]
 }
 
 /** Filters Discord response headers down to the allowlisted rate-limit/semantic headers. */
@@ -64,7 +71,7 @@ export function buildResponse(
         data: result.body,
         meta: { http: { status: result.status, headers } },
       },
-      content: [],
+      content: textContent(result.body),
       isError: true,
     }
   }
@@ -78,14 +85,14 @@ export function buildResponse(
   }
 
   const data = project(result.body, jmespathExpr)
-  return { structuredContent: { data, meta }, content: [] }
+  return { structuredContent: { data, meta }, content: textContent(data) }
 }
 
 /** Builds a `data: null` error envelope for MCP-local failures — no Discord HTTP response exists. */
 export function buildLocalError(type: string, message: string): ToolEnvelope {
   return {
     structuredContent: { data: null, meta: {}, error: { type, message } },
-    content: [],
+    content: textContent({ error: { type, message } }),
     isError: true,
   }
 }

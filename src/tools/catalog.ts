@@ -26,7 +26,7 @@ const qs = (
 }
 
 /** The v1 Discord REST MCP tools, in `tools/list` registration order. */
-export const toolCatalog: ToolDef[] = [
+export const toolCatalog = [
   {
     name: 'get_current_user',
     description: 'Get the current (bot) user. Discord: Get Current User.',
@@ -116,12 +116,26 @@ export const toolCatalog: ToolDef[] = [
   },
   {
     name: 'get_channel_messages',
-    description: 'List messages in a channel. Discord: Get Channel Messages.',
+    description:
+      'List messages in a channel. Discord: Get Channel Messages. ' +
+      'At most one of around/before/after may be set.',
     inputShape: {
       channel_id: snowflake,
-      around: snowflake.optional(),
-      before: snowflake.optional(),
-      after: snowflake.optional(),
+      around: snowflake
+        .optional()
+        .describe(
+          'Message ID to center the page on. Mutually exclusive with before/after.'
+        ),
+      before: snowflake
+        .optional()
+        .describe(
+          'Return messages before this message ID. Mutually exclusive with around/after.'
+        ),
+      after: snowflake
+        .optional()
+        .describe(
+          'Return messages after this message ID. Mutually exclusive with around/before.'
+        ),
       limit: z.number().int().min(1).max(100).optional(),
     },
     // Discord: around/before/after are mutually exclusive — enforced here since a
@@ -174,7 +188,10 @@ export const toolCatalog: ToolDef[] = [
             '-snapshot',
           ])
         )
-        .optional(),
+        .optional()
+        .describe(
+          'Content-type filters. Prefix a value with "-" to negate it (exclude messages with that content type).'
+        ),
       sort_by: z.enum(['timestamp', 'relevance']).optional(),
       sort_order: z.enum(['asc', 'desc']).optional(),
     },
@@ -209,7 +226,12 @@ export const toolCatalog: ToolDef[] = [
     inputShape: {
       channel_id: snowflake,
       message_id: snowflake,
-      emoji: z.string().min(1),
+      emoji: z
+        .string()
+        .min(1)
+        .describe(
+          'URL-encoded emoji: a unicode emoji, or "name:id" for a custom emoji.'
+        ),
       type: z.number().int().min(0).max(1).optional(),
       after: snowflake.optional(),
       limit: z.number().int().min(1).max(100).optional(),
@@ -224,7 +246,7 @@ export const toolCatalog: ToolDef[] = [
       'List pinned messages in a channel (current, non-deprecated endpoint). Discord: Get Channel Pins.',
     inputShape: {
       channel_id: snowflake,
-      before: z.iso.datetime().optional(),
+      before: z.iso.datetime({ offset: true }).optional(),
       limit: z.number().int().min(1).max(50).optional(),
     },
     path: (a) => `/channels/${String(a.channel_id)}/messages/pins`,
@@ -257,7 +279,7 @@ export const toolCatalog: ToolDef[] = [
       'List public archived threads in a channel. Discord: List Public Archived Threads.',
     inputShape: {
       channel_id: snowflake,
-      before: z.iso.datetime().optional(),
+      before: z.iso.datetime({ offset: true }).optional(),
       limit: z.number().int().min(1).optional(),
     },
     path: (a) => `/channels/${String(a.channel_id)}/threads/archived/public`,
@@ -269,7 +291,7 @@ export const toolCatalog: ToolDef[] = [
       'List private archived threads in a channel (requires READ_MESSAGE_HISTORY + MANAGE_THREADS). Discord: List Private Archived Threads.',
     inputShape: {
       channel_id: snowflake,
-      before: z.iso.datetime().optional(),
+      before: z.iso.datetime({ offset: true }).optional(),
       limit: z.number().int().min(1).optional(),
     },
     path: (a) => `/channels/${String(a.channel_id)}/threads/archived/private`,
@@ -333,4 +355,4 @@ export const toolCatalog: ToolDef[] = [
     path: (a) => `/guilds/${String(a.guild_id)}/scheduled-events`,
     query: (a) => qs(a, ['with_user_count']),
   },
-]
+] as const satisfies ToolDef[]

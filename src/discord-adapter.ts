@@ -17,9 +17,10 @@ export interface DiscordHttpResult {
 export class DiscordRequestError extends Error {
   constructor(
     message: string,
-    public readonly cause: 'timeout' | 'network'
+    public readonly kind: 'timeout' | 'network',
+    cause?: unknown
   ) {
-    super(message)
+    super(message, cause === undefined ? undefined : { cause })
   }
 }
 
@@ -130,9 +131,17 @@ export function createDiscordAdapter(
   // to avoid Node's default MaxListenersExceededWarning under load.
   rest.setMaxListeners?.(0)
 
+  // Every adapter.request() call's signal while it's in flight. A `response`
+  // event not matching the current listener's own signal may still belong to
+  // one of these — that request's own listener will capture it — so it must
+  // never be cancelled here. Only a signal absent from this set is genuinely
+  // unclaimed by anyone.
+  const inFlightSignals = new Set<AbortSignal>()
+
   return {
     async request(_method, path, query) {
       const signal = new AbortController().signal
+      inFlightSignals.add(signal)
       let captured: RawResponseLike | undefined
 
       const onResponse = (
@@ -141,9 +150,13 @@ export function createDiscordAdapter(
       ) => {
         if (request.data.signal === signal) {
           captured = response
-        } else {
-          // Not our request — best-effort release of the clone instead of
-          // leaving it buffered. This runs synchronously inside REST's
+        } else if (
+          request.data.signal === undefined ||
+          !inFlightSignals.has(request.data.signal)
+        ) {
+          // Genuinely nobody's request — no adapter.request() call is
+          // tracking this signal, so nobody else will read this clone.
+          // Best-effort release it. This runs synchronously inside REST's
           // `emit()`, so any throw here (e.g. a `.body` shape without
           // `.cancel`) would corrupt an unrelated concurrent request's
           // `queueRequest()` result — never let it escape.
@@ -153,6 +166,9 @@ export function createDiscordAdapter(
             // ignored — see comment above
           }
         }
+        // else: belongs to another still in-flight adapter.request() call —
+        // its own listener will capture it; touching its body here would
+        // race that request's own read.
       }
       rest.on('response', onResponse)
 
@@ -168,6 +184,7 @@ export function createDiscordAdapter(
         thrown = err
       } finally {
         rest.off('response', onResponse)
+        inFlightSignals.delete(signal)
       }
 
       // On a Discord 4xx/5xx, `@discordjs/rest` already read and parsed the
@@ -190,20 +207,38 @@ export function createDiscordAdapter(
         }
       }
 
-      if (captured) {
-        return {
-          body: await readJsonBody(captured),
-          status: captured.status,
-          headers: toHeaderRecord(captured.headers),
+      // Only take the captured fast path on a genuine success (`thrown`
+      // undefined) — an unclassified error alongside a `captured` response
+      // (e.g. a late abort/timeout firing after headers were already
+      // captured) must still surface as a failure, never as a fabricated
+      // success built from a possibly-stale response.
+      if (thrown === undefined) {
+        if (captured) {
+          return {
+            body: await readJsonBody(captured),
+            status: captured.status,
+            headers: toHeaderRecord(captured.headers),
+          }
         }
+        throw new DiscordRequestError(
+          'Discord request succeeded but no response was captured',
+          'network'
+        )
       }
 
       const message =
         thrown instanceof Error ? thrown.message : 'unknown transport error'
-      const cause = /timeout|abort/i.test(message) ? 'timeout' : 'network'
+      const name = thrown instanceof Error ? thrown.name : undefined
+      const kind =
+        name === 'AbortError' ||
+        name === 'TimeoutError' ||
+        /timeout/i.test(message)
+          ? 'timeout'
+          : 'network'
       throw new DiscordRequestError(
-        `Discord request failed (${cause}): ${message}`,
-        cause
+        `Discord request failed (${kind}): ${message}`,
+        kind,
+        thrown
       )
     },
   }

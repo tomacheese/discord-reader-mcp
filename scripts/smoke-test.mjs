@@ -1,13 +1,14 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
-const token = process.env.MCP_AUTH_TOKEN
-if (!token) throw new Error('MCP_AUTH_TOKEN env var required')
+// /mcp is gated by the Azure Function App host key (authLevel: 'function'), not
+// an app-level Bearer token — see infra/README.md's "App key" section. `func
+// start` does not enforce this locally, so the key is only appended when set.
+const functionKey = process.env.FUNCTIONS_KEY
+const url = new URL('http://127.0.0.1:7071/mcp')
+if (functionKey) url.searchParams.set('code', functionKey)
 
-const transport = new StreamableHTTPClientTransport(
-  new URL('http://127.0.0.1:7071/mcp'),
-  { requestInit: { headers: { authorization: `Bearer ${token}` } } }
-)
+const transport = new StreamableHTTPClientTransport(url)
 const client = new Client({ name: 'smoke-test', version: '1.0.0' })
 await client.connect(transport)
 

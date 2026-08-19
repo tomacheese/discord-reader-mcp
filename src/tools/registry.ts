@@ -60,16 +60,17 @@ export function buildToolHandler(
       }
       if (err instanceof DiscordRequestError) {
         const type =
-          err.cause === 'timeout'
+          err.kind === 'timeout'
             ? 'DISCORD_REQUEST_TIMEOUT'
             : 'DISCORD_REQUEST_FAILED'
         const message =
-          err.cause === 'timeout'
+          err.kind === 'timeout'
             ? 'Discord request timed out'
             : 'Discord request failed'
         logger.warn('tool call failed: transport error', {
           tool: def.name,
-          cause: err.cause,
+          kind: err.kind,
+          message: err.message,
         })
         return buildLocalError(type, message)
       }

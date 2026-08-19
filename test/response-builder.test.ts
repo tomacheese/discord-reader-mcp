@@ -18,7 +18,7 @@ describe('buildResponse', () => {
     expect(env.structuredContent.meta).toEqual({
       http: { status: 200, headers: { 'x-ratelimit-remaining': '4' } },
     })
-    expect(env.content).toEqual([])
+    expect(env.content).toEqual([{ type: 'text', text: '{"id":"1"}' }])
     expect(env.isError).toBeUndefined()
   })
 
@@ -98,6 +98,11 @@ describe('buildResponse', () => {
       },
     })
     expect(env.isError).toBe(true)
-    expect(env.content).toEqual([])
+    expect(env.content).toEqual([
+      {
+        type: 'text',
+        text: '{"error":{"type":"DISCORD_REQUEST_TIMEOUT","message":"Discord request timed out"}}',
+      },
+    ])
   })
 })

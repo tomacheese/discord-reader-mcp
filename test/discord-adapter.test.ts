@@ -224,6 +224,57 @@ describe('createDiscordAdapter', () => {
     expect(result.body).toEqual({ mine: true })
   })
 
+  it('does not cancel a concurrent sibling request own response body', async () => {
+    // Mimics a real EventEmitter: `response` is broadcast to every currently
+    // registered listener, not just the request it belongs to — reproducing
+    // the window where a second, still-registering call's own queueRequest()
+    // fires while the first call's listener is still attached.
+    const listeners: ResponseListener[] = []
+    const cancelled: boolean[] = []
+
+    const rest = {
+      on: vi.fn((_event: 'response', l: ResponseListener) => {
+        listeners.push(l)
+      }),
+      off: vi.fn((_event: 'response', l: ResponseListener) => {
+        const i = listeners.indexOf(l)
+        if (i !== -1) listeners.splice(i, 1)
+      }),
+      queueRequest: vi.fn((request: { signal?: AbortSignal }) => {
+        const state = { cancelled: false }
+        cancelled.push(state.cancelled)
+        const index = cancelled.length - 1
+        const response = {
+          status: 200,
+          headers: new Headers(),
+          body: {
+            cancel: () => {
+              cancelled[index] = true
+              return Promise.resolve()
+            },
+          } as unknown as ReadableStream,
+          json: () => Promise.resolve({ index }),
+        }
+        for (const l of listeners)
+          l({ data: { signal: request.signal } }, response)
+        return Promise.resolve()
+      }),
+    }
+    const adapter = createDiscordAdapter(
+      { discordToken: 't', discordRequestTimeoutMs: 30_000 },
+      rest
+    )
+
+    const [a, b] = await Promise.all([
+      adapter.request('GET', '/users/@me'),
+      adapter.request('GET', '/users/@me/guilds'),
+    ])
+
+    expect(a.body).toEqual({ index: 0 })
+    expect(b.body).toEqual({ index: 1 })
+    expect(cancelled).toEqual([false, false])
+  })
+
   it('passes query params through as a URLSearchParams', async () => {
     const rest = fakeRest([{ status: 200, body: [], headers: {} }])
     const adapter = createDiscordAdapter(
