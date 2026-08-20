@@ -1,0 +1,39 @@
+{
+  "name": "discord-reader-mcp",
+  "version": "1.0.0",
+  "description": "Read-only MCP server exposing the Discord REST API as tools",
+  "main": "dist/functions/*.js",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "prestart": "pnpm build",
+    "start": "func start",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@azure/functions": "4.16.2",
+    "@discordjs/rest": "2.6.3",
+    "@jmespath-community/jmespath": "1.3.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "discord-api-types": "0.38.53",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@book000/eslint-config": "^1.16.38",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@types/node": "^26.2.0",
+    "azure-functions-core-tools": "^4.13.0",
+    "eslint": "^10.8.1",
+    "only-allow": "^1.2.2",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}

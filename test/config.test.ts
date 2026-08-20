@@ -1,0 +1,39 @@
+import { describe, it, expect } from 'vitest'
+import { loadConfig, ConfigError } from '../src/config.js'
+
+describe('loadConfig', () => {
+  it('loads required vars and applies defaults', () => {
+    const cfg = loadConfig({
+      DISCORD_TOKEN: 'tok',
+    })
+    expect(cfg.discordToken).toBe('tok')
+    expect(cfg.discordRequestTimeoutMs).toBe(30_000)
+    expect(cfg.logLevel).toBe('info')
+    expect(cfg.allowedOrigins).toEqual([])
+  })
+
+  it('parses comma-separated origins and numeric overrides', () => {
+    const cfg = loadConfig({
+      DISCORD_TOKEN: 'tok',
+      MCP_ALLOWED_ORIGINS: 'https://a.example,https://b.example',
+      DISCORD_REQUEST_TIMEOUT_MS: '5000',
+      LOG_LEVEL: 'debug',
+    })
+    expect(cfg.allowedOrigins).toEqual([
+      'https://a.example',
+      'https://b.example',
+    ])
+    expect(cfg.discordRequestTimeoutMs).toBe(5000)
+    expect(cfg.logLevel).toBe('debug')
+  })
+
+  it('throws ConfigError without leaking secret value when DISCORD_TOKEN missing', () => {
+    try {
+      loadConfig({ DISCORD_TOKEN: '', LOG_LEVEL: 'debug' })
+      expect.unreachable()
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError)
+      expect((error as Error).message).not.toContain('debug')
+    }
+  })
+})
