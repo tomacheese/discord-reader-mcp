@@ -17,6 +17,7 @@
   "author": "",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@11.22.0",
   "dependencies": {
     "@azure/functions": "4.16.2",
     "@discordjs/rest": "2.6.3",
