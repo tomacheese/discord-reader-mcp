@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     permissions:
+      id-token: write # OIDC 認証に必要
       contents: read
 
     steps:
@@ -44,10 +45,16 @@ jobs:
       - name: ✂️ Prune devDependencies
         run: pnpm install --prod --frozen-lockfile --ignore-scripts --config.node-linker=hoisted
 
+      - name: 🔑 Login to Azure
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: 🚀 Deploy to Azure Functions
         uses: Azure/functions-action@c5060b3b8bb1ebbcb531abd00c822ecbaa8ea656 # v1.5.7
         with:
-          app-name: func-discord-reader-mcp
+          app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
           package: .
-          sku: flexconsumption
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          scm-do-build-during-deployment: false
