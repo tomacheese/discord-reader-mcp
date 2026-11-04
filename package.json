@@ -24,7 +24,7 @@
     "@jmespath-community/jmespath": "1.3.0",
     "@modelcontextprotocol/server": "2.0.0",
     "discord-api-types": "0.38.53",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@book000/eslint-config": "^1.16.38",
