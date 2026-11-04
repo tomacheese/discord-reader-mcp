@@ -23,7 +23,7 @@
     "@discordjs/rest": "2.6.3",
     "@jmespath-community/jmespath": "1.3.0",
     "@modelcontextprotocol/server": "2.0.0",
-    "discord-api-types": "0.38.53",
+    "discord-api-types": "0.38.57",
     "zod": "4.4.3"
   },
   "devDependencies": {
