@@ -1,4 +1,4 @@
-# Azure Functions へのビルドとデプロイ
+# Build and deploy to Azure Functions
 
 name: Deploy to Azure Functions
 
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      id-token: write # OIDC 認証に必要
+      id-token: write # required for OIDC login
       contents: read
 
     steps:

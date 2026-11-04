@@ -1,14 +1,14 @@
 # discord-reader-mcp
 
-Discord REST API の読み取り機能を Model Context Protocol (MCP) Tool として公開する、read-only な MCP サーバー。Azure Functions (v4, Node.js) 上で動作する。
+A read-only Model Context Protocol (MCP) server that exposes Discord REST API read operations as MCP tools. It runs on Azure Functions (v4, Node.js).
 
-Discord API を独自の高レベルモデルへ変換せず、レスポンスの構造をほぼそのまま返す thin adapter として実装している。LLM に渡すトークン量を呼び出し側で制御できるよう、全 Tool に共通で [JMESPath](https://jmespath.org/) projection を適用できる。
+It does not map the Discord API onto a custom high-level model; it is a thin adapter that returns Discord's response structure almost as-is. Every tool accepts an optional [JMESPath](https://jmespath.org/) projection so callers can control how many tokens are handed to the LLM.
 
-## 提供する Tool
+## Tools
 
-`src/tools/catalog.ts` に定義された 25 個の read-only Tool を提供する。
+25 read-only tools are defined in `src/tools/catalog.ts`.
 
-| カテゴリ | Tool                                                                                                                                       |
+| Category | Tool                                                                                                                                       |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | User     | `get_current_user`, `get_user`                                                                                                             |
 | Guild    | `get_guilds`, `get_guild`, `get_guild_roles`, `get_guild_role_member_counts`, `get_guild_audit_log`, `get_guild_bans`, `get_guild_invites` |
@@ -18,45 +18,47 @@ Discord API を独自の高レベルモデルへ変換せず、レスポンス�
 | Thread   | `list_active_guild_threads`, `list_public_archived_threads`, `list_private_archived_threads`, `list_thread_members`                        |
 | Event    | `list_scheduled_events`                                                                                                                    |
 
-書き込み系の Tool（メッセージ送信、ロール付与など）は提供しない。
+No write tools (sending messages, assigning roles, etc.) are provided; the Discord adapter only issues `GET` requests.
 
-## セットアップ
+## Setup
 
-### 必要環境
+### Requirements
 
-- Node.js（バージョンは `.node-version` 参照）
-- pnpm（`preinstall` で `only-allow pnpm` を強制）
-- Azure Functions Core Tools（ローカル実行用）
+- Node.js (see `.node-version` for the version)
+- pnpm (`preinstall` enforces it via `only-allow pnpm`)
+- Azure Functions Core Tools (for running locally; installed as a devDependency)
 
 ```bash
 pnpm install
 ```
 
-### 環境変数
+### Environment variables
 
-ローカル実行時は `local.settings.json`（`.gitignore` 対象、リポジトリには含まれない）の `Values` に設定する。
+For local runs, set them under `Values` in `local.settings.json` (git-ignored, not in the repository).
 
-| 変数名                       | 必須 | 説明                                                   |
-| ---------------------------- | ---- | ------------------------------------------------------ |
-| `DISCORD_TOKEN`              | ✅   | Discord Bot Token                                      |
-| `MCP_ALLOWED_ORIGINS`        | -    | `/mcp` の CORS 許可オリジン（カンマ区切り）            |
-| `DISCORD_REQUEST_TIMEOUT_MS` | -    | Discord API リクエストのタイムアウト（ms、既定 30000） |
-| `LOG_LEVEL`                  | -    | ログレベル                                             |
+| Variable                     | Required | Description                                                        |
+| ---------------------------- | -------- | ------------------------------------------------------------------ |
+| `DISCORD_TOKEN`              | Yes      | Discord bot token                                                  |
+| `MCP_ALLOWED_ORIGINS`        | No       | Comma-separated allowed origins (CORS and Origin check) for `/mcp` |
+| `DISCORD_REQUEST_TIMEOUT_MS` | No       | Timeout for Discord API requests in ms (default 30000)             |
+| `LOG_LEVEL`                  | No       | Log level: `debug`, `info` (default), `warn` or `error`            |
 
-### 開発コマンド
+### Development commands
 
 ```bash
-pnpm build   # tsc ビルド
-pnpm watch   # ビルドの watch
-pnpm start   # ビルドしてローカルの Azure Functions ホストを起動
+pnpm build   # compile with tsc
+pnpm watch   # tsc in watch mode
+pnpm start   # build, then start the local Azure Functions host
 pnpm test    # vitest
 pnpm lint    # eslint
 pnpm format  # prettier --write
 ```
 
-## デプロイ
+With the local host running (`pnpm start`), `node scripts/smoke-test.mjs` runs an end-to-end check against `http://127.0.0.1:7071/mcp` (set `FUNCTIONS_KEY` if the host enforces a key).
 
-Azure Functions (Flex Consumption) へのインフラ構築・デプロイ手順は [`infra/README.md`](./infra/README.md) を参照。`/mcp` エンドポイントは Function App の host key で認証する。
+## Deployment
+
+See [`infra/README.md`](./infra/README.md) for provisioning and deploying to Azure Functions (Flex Consumption). The `/mcp` endpoint is authenticated with the Function App's host key.
 
 ## License
 
