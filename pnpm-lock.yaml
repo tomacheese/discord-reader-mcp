@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@azure/functions':
-        specifier: 4.16.2
-        version: 4.16.2
+        specifier: 4.17.0
+        version: 4.17.0
       '@discordjs/rest':
         specifier: 2.6.3
         version: 2.6.3
@@ -61,8 +61,8 @@ packages:
     resolution: {integrity: sha512-Cux0hLu5ZXlC/Kb+yvJVhRLIdkfFwui2HeT5oGZL00r/GCUUkhGTzRfZUjRN4Bq729mPv3okPucz2z7SMQLStA==}
     engines: {node: '>=18.0'}
 
-  '@azure/functions@4.16.2':
-    resolution: {integrity: sha512-6uq0Z7e3njy8fHpgCVIJWDtbkZz+BYXc6L8fQjisf8+hPdnauM5yZ70j9YC8xas6zvL1dFA+EfLuZcNYyuWLTg==}
+  '@azure/functions@4.17.0':
+    resolution: {integrity: sha512-BC+eWRqwL3LYvkfKO0UqVSig4IrEbgbaUvxGC6MhpUJRsZqVlEYHyE0EZcn7MtOc2py1ArJdXkqwuOzdvlbBSA==}
     engines: {node: '>=20.0'}
 
   '@book000/eslint-config@1.16.38':
@@ -2199,7 +2199,7 @@ snapshots:
 
   '@azure/functions-extensions-base@0.3.0': {}
 
-  '@azure/functions@4.16.2':
+  '@azure/functions@4.17.0':
     dependencies:
       '@azure/functions-extensions-base': 0.3.0
       cookie: 0.7.2
@@ -2402,7 +2402,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.2)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -2658,8 +2658,8 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@6.15.0:
