@@ -22,7 +22,7 @@
     "@azure/functions": "4.17.0",
     "@discordjs/rest": "2.6.3",
     "@jmespath-community/jmespath": "1.5.0",
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/server": "2.4.0",
     "discord-api-types": "0.38.57",
     "zod": "4.4.3"
   },
