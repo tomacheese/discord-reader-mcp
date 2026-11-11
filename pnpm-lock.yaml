@@ -186,31 +186,31 @@ importers:
         version: 4.6.7
     devDependencies:
       '@book000/eslint-config':
-        specifier: ^1.16.118
+        specifier: 1.16.118
         version: 1.16.118(eslint@10.14.0)(typescript@6.0.3)
       '@modelcontextprotocol/sdk':
-        specifier: ^1.30.0
+        specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)
       '@types/node':
-        specifier: ^26.2.0
+        specifier: 26.6.6
         version: 26.6.6
       azure-functions-core-tools:
-        specifier: ^4.13.0
+        specifier: 4.16.0
         version: 4.16.0
       eslint:
-        specifier: ^10.14.0
+        specifier: 10.14.0
         version: 10.14.0
       only-allow:
-        specifier: ^1.2.2
+        specifier: 1.2.2
         version: 1.2.2
       prettier:
-        specifier: ^3.9.6
+        specifier: 3.9.10
         version: 3.9.10
       typescript:
-        specifier: ^6.0.3
+        specifier: 6.0.3
         version: 6.0.3
       vitest:
-        specifier: ^5.0.0
+        specifier: 5.1.0
         version: 5.1.0(@types/node@26.6.6)(vite@8.3.7(@types/node@26.6.6)(yaml@2.9.1))
 
 packages:
