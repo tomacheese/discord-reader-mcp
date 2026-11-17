@@ -195,8 +195,8 @@ importers:
         version: 4.6.7
     devDependencies:
       '@book000/eslint-config':
-        specifier: ^1.16.118
-        version: 1.16.122(eslint@10.15.0)(typescript@6.0.3)
+        specifier: ^1.17.2
+        version: 1.17.2(eslint@10.15.0)(typescript@6.0.3)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.32.2(zod@4.6.7)
@@ -232,10 +232,10 @@ packages:
     resolution: {integrity: sha512-uvfAoU/j89p1IJ4pi1r4DJysznmbdLV/KZgx26TxF3z06Cnu2NiiNZLHL83Km9oHy+sSuaSUKuEsdj32tL3C6A==}
     engines: {node: '>=20.0'}
 
-  '@book000/eslint-config@1.16.122':
-    resolution: {integrity: sha512-dusD7HwfmPCVHqHobWGX7gkIVSbdfSk3dTRjSZHa028HV6atC6U/IC4WDHhtI18EIK3lCLIoDtB2Ug48sQjc+Q==}
+  '@book000/eslint-config@1.17.2':
+    resolution: {integrity: sha512-xyGeqoShjdWlj3RFSthB2ZzlhMjn0AG0eFVfq1lcyUPrLeWLVyZZQbIuwlLggkiQ8KPiv88vvT9LFKCT2rs5Kw==}
     peerDependencies:
-      eslint: 10.14.0
+      eslint: 10.15.0
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -1857,7 +1857,7 @@ snapshots:
       '@azure/functions-extensions-base': 0.3.0
       cookie: 0.7.2
 
-  '@book000/eslint-config@1.16.122(eslint@10.15.0)(typescript@6.0.3)':
+  '@book000/eslint-config@1.17.2(eslint@10.15.0)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.72.2(eslint@10.15.0)(typescript@6.0.3)
       eslint: 10.15.0
