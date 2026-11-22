@@ -82,8 +82,7 @@ const calculators = {
       params.after !== undefined && params.before === undefined
         ? 'after'
         : 'before'
-    const edge = direction === 'before' ? entries.at(-1) : entries[0]
-    const id = idOf(edge)
+    const id = idOf(entries.at(-1))
     return id === undefined ? undefined : { [direction]: id }
   },
   get_poll_answer_voters: (body, params) => {

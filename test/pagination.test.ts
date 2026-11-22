@@ -70,6 +70,14 @@ describe('paginationCalculators', () => {
       expect(calc(body, { limit: 3 })).toEqual({ before: '100' })
     })
 
+    it('continues with { after: newestId } on ascending pages when the caller sent after', () => {
+      const body = {
+        audit_log_entries: [{ id: '100' }, { id: '200' }, { id: '300' }],
+        users: [],
+      }
+      expect(calc(body, { after: '50', limit: 3 })).toEqual({ after: '300' })
+    })
+
     it('returns undefined when the body is not an object', () => {
       expect(calc(null, { limit: 3 })).toBeUndefined()
     })
