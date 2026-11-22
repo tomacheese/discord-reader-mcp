@@ -48,4 +48,28 @@ describe('toolCatalog', () => {
       ).toBe('string')
     }
   })
+
+  describe('get_reactions emoji', () => {
+    const getReactions = toolCatalog.find((t) => t.name === 'get_reactions')
+    const pathFor = (emoji: string) =>
+      getReactions?.path({ channel_id: '2', message_id: '4', emoji })
+
+    it('URL-encodes a raw unicode emoji exactly once', () => {
+      expect(pathFor('👍')).toBe(
+        '/channels/2/messages/4/reactions/%F0%9F%91%8D'
+      )
+    })
+
+    it('URL-encodes a raw custom emoji "name:id"', () => {
+      expect(pathFor('party:123')).toBe(
+        '/channels/2/messages/4/reactions/party%3A123'
+      )
+    })
+
+    it('documents the input as raw, not URL-encoded', () => {
+      expect(getReactions?.inputShape.emoji.description).toContain(
+        'not URL-encoded'
+      )
+    })
+  })
 })

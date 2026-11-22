@@ -230,7 +230,7 @@ export const toolCatalog = [
         .string()
         .min(1)
         .describe(
-          'URL-encoded emoji: a unicode emoji, or "name:id" for a custom emoji.'
+          'Emoji as raw text, not URL-encoded: a unicode emoji (e.g. "👍"), or "name:id" for a custom emoji.'
         ),
       type: z.number().int().min(0).max(1).optional(),
       after: snowflake.optional(),
