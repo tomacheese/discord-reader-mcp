@@ -182,8 +182,8 @@ importers:
         specifier: 2.6.3
         version: 2.6.3
       '@jmespath-community/jmespath':
-        specifier: 1.5.0
-        version: 1.5.0
+        specifier: 1.5.1
+        version: 1.5.1
       '@modelcontextprotocol/server':
         specifier: 2.4.0
         version: 2.4.0
@@ -330,8 +330,8 @@ packages:
   '@isaacs/nonrecursive-glob-match@1.1.0':
     resolution: {integrity: sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==}
 
-  '@jmespath-community/jmespath@1.5.0':
-    resolution: {integrity: sha512-AnvPI8JnCmG6vJrgHRqalE1g0vjkpHbXye0EFIAJRI4GVHWfyThOQ4fHLUCmrJowmR4UcSzdZesprUvWFTo02A==}
+  '@jmespath-community/jmespath@1.5.1':
+    resolution: {integrity: sha512-SbVXPW3UeH1UKeXEt2zdENTX5iutM4ny4nLZC88YGeuQCA7IjJ7i7CHlW6izcR7iYdfVZW/iDld8iN8Gx1Girw==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -1976,7 +1976,7 @@ snapshots:
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
-  '@jmespath-community/jmespath@1.5.0': {}
+  '@jmespath-community/jmespath@1.5.1': {}
 
   '@jridgewell/resolve-uri@3.1.3': {}
 
