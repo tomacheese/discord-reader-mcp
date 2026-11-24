@@ -31,7 +31,7 @@
     "@book000/eslint-config": "^1.17.2",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/node": "^26.2.0",
-    "azure-functions-core-tools": "^4.13.0",
+    "azure-functions-core-tools": "^4.17.0",
     "eslint": "^10.14.0",
     "only-allow": "^1.2.2",
     "prettier": "^3.10.0",
