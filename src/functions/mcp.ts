@@ -118,7 +118,6 @@ export function createMcpFunction(
 const config = loadConfig(process.env)
 const logger = createLogger(config.logLevel)
 
-// eslint-disable-next-line unicorn/no-top-level-side-effects -- Azure Functions v4 discovers functions by importing this file and running app.http() as a side effect
 app.http('mcp', {
   methods: ['GET', 'POST', 'DELETE'],
   // App-key gated: callers must supply the Function App's host key (?code=
@@ -128,7 +127,6 @@ app.http('mcp', {
   handler: createMcpFunction(config, logger),
 })
 
-// eslint-disable-next-line unicorn/no-top-level-side-effects -- see above
 app.http('mcpPreflight', {
   methods: ['OPTIONS'],
   // CORS preflight never carries the app key, so this route stays

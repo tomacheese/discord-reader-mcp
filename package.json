@@ -6,6 +6,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "tsc -p tsconfig.build.json",
+    "compile": "tsc --noEmit",
     "watch": "tsc -p tsconfig.build.json --watch",
     "prestart": "pnpm build",
     "start": "func start",

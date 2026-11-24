@@ -39,7 +39,7 @@ console.log(
   JSON.stringify(projected.structuredContent)
 )
 if (!Array.isArray(projected.structuredContent?.data))
-  throw new Error('jmespath projection did not return an array')
+  throw new TypeError('jmespath projection did not return an array')
 
 const badJmespath = await client.callTool({
   name: 'get_current_user',

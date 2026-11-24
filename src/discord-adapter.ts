@@ -107,8 +107,7 @@ function toHeaderRecord(headers: Headers): Record<string, string> {
  * indistinguishable from a legitimate `null` result.
  */
 async function readJsonBody(response: RawResponseLike): Promise<unknown> {
-  if (response.status === 204) return null
-  return response.json()
+  return response.status === 204 ? null : response.json()
 }
 
 /**
