@@ -24,8 +24,7 @@ function idOf(item: unknown): string | undefined {
 
 /** Reads `.user.id` off an item, or `undefined` when the item has no such nested id. */
 function userIdOf(item: unknown): string | undefined {
-  if (!isRecord(item)) return undefined
-  return idOf(item.user)
+  return isRecord(item) ? idOf(item.user) : undefined
 }
 
 /**

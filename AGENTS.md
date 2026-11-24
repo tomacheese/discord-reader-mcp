@@ -16,13 +16,14 @@ Package manager is pnpm (enforced by `preinstall`); the Node version is in `.nod
 ```bash
 pnpm install
 pnpm build    # tsc -p tsconfig.build.json
+pnpm compile  # tsc --noEmit (covers src and test)
 pnpm test     # vitest run
 pnpm lint     # eslint .
 pnpm format   # prettier --write .
 pnpm start    # build, then `func start` (needs Azure Functions Core Tools and local.settings.json)
 ```
 
-There is no typecheck script; use `pnpm exec tsc --noEmit` (covers `src` and `test`). `node scripts/smoke-test.mjs` is a manual end-to-end check against a running local host. The only CI workflow (`.github/workflows/azure-functions-deploy.yml`) builds and deploys on push to `main`/`master`; it does not run lint or tests, so run them locally.
+`node scripts/smoke-test.mjs` is a manual end-to-end check against a running local host. CI runs lint, tests, and type checking on pull requests and pushes to `main`/`master`; deployment requires verification to succeed.
 
 ## Architecture
 

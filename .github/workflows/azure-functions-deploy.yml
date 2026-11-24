@@ -5,14 +5,26 @@ name: Deploy to Azure Functions
 on:
   push:
     branches: [main, master]
+  pull_request:
+    branches: [main, master]
   workflow_dispatch:
 
 concurrency:
-  group: azure-deploy
+  group: ${{ github.event_name == 'pull_request' && format('verify-pr-{0}', github.event.pull_request.number) || 'azure-deploy' }}
   cancel-in-progress: true
 
 jobs:
+  verify:
+    name: Verify
+    uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@master
+    permissions:
+      contents: read
+    with:
+      disabled-jobs: depcheck
+
   build-and-deploy:
+    needs: verify
+    if: github.event_name != 'pull_request'
     name: Build and Deploy
     runs-on: ubuntu-latest
     environment: production

@@ -12,8 +12,7 @@ export function isOriginAllowed(
   allowedOrigins: string[]
 ): boolean {
   const origin = headers.get('origin')
-  if (origin === null) return true
-  return allowedOrigins.includes(origin)
+  return origin === null || allowedOrigins.includes(origin)
 }
 
 /** Methods the `/mcp` route accepts, echoed on CORS preflight. */
@@ -33,6 +32,7 @@ export function corsHeaders(
   allowedOrigins: string[]
 ): Record<string, string> {
   const origin = headers.get('origin')
-  if (origin === null || !allowedOrigins.includes(origin)) return {}
-  return { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+  return origin === null || !allowedOrigins.includes(origin)
+    ? {}
+    : { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
 }
