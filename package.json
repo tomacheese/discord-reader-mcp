@@ -28,14 +28,14 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@book000/eslint-config": "^1.17.2",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "@types/node": "^26.6.6",
-    "azure-functions-core-tools": "^4.17.0",
-    "eslint": "^10.14.0",
-    "only-allow": "^1.2.2",
-    "prettier": "^3.10.0",
-    "typescript": "^6.0.3",
-    "vitest": "^5.1.0"
+    "@book000/eslint-config": "1.17.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@types/node": "26.6.6",
+    "azure-functions-core-tools": "4.17.0",
+    "eslint": "10.15.0",
+    "only-allow": "1.2.2",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
   }
 }
